@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String?
+  password             String
+  isResettingPassword  Boolean   @default(false)
+  resetPasswordToken   String?   @unique
+  createdAt            DateTime  @default(now())
+  dateResetPassword    DateTime?
+  profilePictureUrl    String?
+  role                 UserRoles @default(USER)
+  status               Status    @default(ACTIVE)
+  stripeCustomerId     String?
+  stripeUserPlan       UserPlan  @default(FREE)
+  accountLockedUntil   DateTime?
+  address              String?
+  bio                  String?
+  city                 String?
+  country              String?
+  failedLoginAttempts  Int       @default(0)
+  is2faEnabled         Boolean   @default(false)
+  lastLogin            DateTime?
+  twoFactorBackupCodes String[]  @default([])
+  twoFactorSecret      String?   @unique
+}
+
+enum UserRoles {
+  USER
+  ADMIN
+}
+
+enum UserPlan {
+  FREE
+  PREMIUM
+  ULTIMATE
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  BLOQUED
+  DISABLED
+}
