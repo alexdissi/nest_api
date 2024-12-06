@@ -38,7 +38,7 @@ export class AuthRepository {
   async updateUserResetStatus(userId: string, isResettingPassword: boolean, resetPasswordToken?: string) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: { isResettingPassword, resetPasswordToken },
+      data: { isResettingPassword, resetPasswordToken,dateResetPassword: new Date() },
     });
   }
 
@@ -60,6 +60,13 @@ export class AuthRepository {
     return this.prisma.user.update({
       where: { id: userId },
       data: { twoFactorSecret: null, is2faEnabled: false, twoFactorBackupCodes: [] },
+    });
+  }
+  
+  async updateUserLastLogin(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { lastLogin: new Date() },
     });
   }
 }

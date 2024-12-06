@@ -33,6 +33,8 @@ export class AuthService {
       throw new HttpException('Invalid password.', HttpStatus.UNAUTHORIZED);
     }
 
+    await this.authRepository.updateUserLastLogin(user.id);
+
     return this.authenticateUser({ userId: user.id });
   }
 
@@ -95,13 +97,6 @@ export class AuthService {
 
   async resetUserPasswordRequest({ email }: { email: string }) {
     const user = await this.authRepository.findUserByEmail(email);
-
-    if (user.isResettingPassword) {
-      throw new HttpException(
-        "A password reset request is already in progress.",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
 
     const resetToken = randomBytes(32).toString('hex');
     await this.authRepository.updateUserResetStatus(user.id, true, resetToken);
