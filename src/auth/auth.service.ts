@@ -96,10 +96,6 @@ export class AuthService {
   async resetUserPasswordRequest({ email }: { email: string }) {
     const user = await this.authRepository.findUserByEmail(email);
 
-    if (!user) {
-      throw new HttpException("User does not exist.", HttpStatus.NOT_FOUND);
-    }
-
     if (user.isResettingPassword) {
       throw new HttpException(
         "A password reset request is already in progress.",
@@ -118,7 +114,7 @@ export class AuthService {
 
     return {
       error: false,
-      message: 'Please check your email to reset your password.',
+      message: 'If the email exists in our system, you will receive password reset instructions.',
     };
   }
 

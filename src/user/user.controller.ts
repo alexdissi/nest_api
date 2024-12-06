@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -16,7 +16,7 @@ export class UserController {
       return this.userService.getUsers(paginationDto);
     }
 
-    @Get('/info')
+    @Get('/me')
     async getUser(@Req() req: RequestWithUser) {
       if (!req.user || !req.user.userId) {
         throw new Error("The user is not authenticated");
@@ -25,4 +25,10 @@ export class UserController {
       const userId = req.user.userId;      
       return this.userService.getUser(userId);
     }
+
+    @Get('/search-users')
+    async getResearch(@Query() paginationDto: PaginationDto, @Query('name') name: string) {
+        return this.userService.researchUsers(paginationDto, name);
+    }
+    
 }

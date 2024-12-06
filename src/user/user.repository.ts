@@ -43,4 +43,22 @@ export class UserRepository {
           data: data,
         });
       }
+
+      async findUsersByName(name: string, page: number, limit: number) {
+        return this.prisma.user.findMany({
+          where: {
+            name: {
+              contains: name,
+              mode: 'insensitive',
+            },
+          },
+          skip: (page - 1) * limit,
+          take: limit,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        });
+      }
 }

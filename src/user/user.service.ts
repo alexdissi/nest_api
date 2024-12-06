@@ -21,4 +21,10 @@ export class UserService {
     async getUser(userId: string) {
         return this.userRepository.findUserById(userId);
     }
+
+    async researchUsers(paginationDto: PaginationDto, name: string) {
+        const { page, limit } = paginationDto;
+        const users = await this.userRepository.findUsersByName(name, page, limit);
+        return users;
+    }
 }
