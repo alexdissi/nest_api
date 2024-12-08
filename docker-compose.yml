@@ -1,0 +1,7 @@
+version: "1.O"
+services:
+  app:
+    build: .
+    container_name: nest_api
+    ports:
+      - "8000:8000"
