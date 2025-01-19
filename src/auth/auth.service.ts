@@ -1,8 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { compare, hash } from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { AuthRepository } from './auth.repository';
 import { MailerService } from 'src/mailer.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -10,18 +8,20 @@ import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 import { UserPayload } from './jwt.strategy';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
+import { hash, verify } from 'argon2';
+import { UserRepository } from 'src/user/user.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly authRepository: AuthRepository,
+    private readonly userRepository: UserRepository,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
 
   async login({ authBody }: { authBody: LoginUserDto }) {
     const { email, password } = authBody;
-    const user = await this.authRepository.findUserByEmail(email);
+    const user = await this.userRepository.findUserByEmail(email);
 
     if (!user) {
       throw new HttpException("User does not exist.", HttpStatus.NOT_FOUND);
@@ -33,7 +33,7 @@ export class AuthService {
       throw new HttpException('Invalid password.', HttpStatus.UNAUTHORIZED);
     }
 
-    await this.authRepository.updateUserLastLogin(user.id);
+    await this.userRepository.updateUserLastLogin(user.id);
 
     return this.authenticateUser({ userId: user.id });
   }
@@ -47,7 +47,7 @@ export class AuthService {
       throw new HttpException('Passwords do not match.', HttpStatus.BAD_REQUEST);
     }
   
-    const existingUser = await this.authRepository.findUserByEmail(email);
+    const existingUser = await this.userRepository.findUserByEmail(email);
   
     if (existingUser) {
       throw new HttpException('User already exists.', HttpStatus.BAD_REQUEST);
@@ -55,7 +55,7 @@ export class AuthService {
   
     const hashedPassword = await this.hashPassword(password);
   
-    const createdUser = await this.authRepository.createUser({
+    const createdUser = await this.userRepository.createUser({
       email,
       password: hashedPassword,
       name,
@@ -76,7 +76,7 @@ export class AuthService {
   }
 
   async verifyResetPasswordToken(token: string) {
-    const user = await this.authRepository.findUserByResetToken(token);
+    const user = await this.userRepository.findUserByResetToken(token);
 
     if (!user) {
       throw new HttpException('The reset token is incorrect.', HttpStatus.NOT_FOUND);
@@ -96,10 +96,10 @@ export class AuthService {
   }
 
   async resetUserPasswordRequest({ email }: { email: string }) {
-    const user = await this.authRepository.findUserByEmail(email);
+    const user = await this.userRepository.findUserByEmail(email);
 
     const resetToken = randomBytes(32).toString('hex');
-    await this.authRepository.updateUserResetStatus(user.id, true, resetToken);
+    await this.userRepository.updateUserResetStatus(user.id, true, resetToken);
 
     await this.mailerService.sendRequestedPasswordEmail({
       firstName: user.name,
@@ -116,7 +116,7 @@ export class AuthService {
   async resetUserPassword(resetPasswordDto: ResetUserPasswordDto) {
     const { password, token } = resetPasswordDto;
 
-    const user = await this.authRepository.findUserByResetToken(token);
+    const user = await this.userRepository.findUserByResetToken(token);
 
     if (!user) {
       throw new HttpException("User does not exist.", HttpStatus.NOT_FOUND);
@@ -131,7 +131,7 @@ export class AuthService {
 
     const hashedPassword = await this.hashPassword(password);
 
-    await this.authRepository.updateUserPassword(user.id, hashedPassword);
+    await this.userRepository.updateUserPassword(user.id, hashedPassword);
 
     return {
       error: false,
@@ -140,11 +140,11 @@ export class AuthService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    return hash(password, 10);
+    return hash(password);
   }
 
   private async isPasswordValid(password: string, hashedPassword: string): Promise<boolean> {
-    return compare(password, hashedPassword);
+    return verify(hashedPassword, password);
   }
 
   private authenticateUser(payload: UserPayload) {
@@ -158,13 +158,13 @@ export class AuthService {
     const secret = speakeasy.generateSecret({ name: `${AppName}(${userId})` });
     const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
 
-    await this.authRepository.save2FASecret(userId, secret.base32);
+    await this.userRepository.save2FASecret(userId, secret.base32);
 
     return { qrCodeUrl, secret: secret.base32 };
   }
 
   async verify2FA(userId: string, token: string) {
-      const user = await this.authRepository.findUserById(userId);
+      const user = await this.userRepository.findUserById(userId);
       
       if (!user || !user.twoFactorSecret) {
         throw new HttpException(

@@ -6,11 +6,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { UserService } from 'src/user/user.service';
 import { MailerService } from 'src/mailer.service';
-import { AuthRepository } from './auth.repository';
 import { UserRepository } from 'src/user/user.repository';
+import { UserModule } from 'src/user/user.module';
 
 @Module({
   imports: [
+    UserModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
@@ -18,6 +19,6 @@ import { UserRepository } from 'src/user/user.repository';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PrismaService, JwtStrategy, UserService, MailerService, AuthRepository, UserRepository]
+  providers: [AuthService, PrismaService, JwtStrategy, UserService, MailerService, UserRepository]
 })
 export class AuthModule {}
